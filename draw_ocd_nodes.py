@@ -62,29 +62,50 @@ CELL_SYMBOLS = {
 #TYPE6="open_forest_slowest"
 #CELL_TYPES=[TYPE0,TYPE1,TYPE2,TYPE3,TYPE4,TYPE5,TYPE6,]
 
-idx = 0
-TYPE=(POINT*4)
-for cell in in_file:
-    (x,y,_type)=readline(cell, multiplier)
-    x-=offsetx
-    y-=offsety
-    points = [(x,y)]
-    points.append((x,y+multiplier))
-    points.append((x+multiplier,y+multiplier))
-    points.append((x+multiplier,y))
-    #points.append((x,y))
+def finish_polygon( sx, sy, ex, ey, st, h_writer ):
+    global offsetx
+    global offsety
+    sx-=offsetx
+    sy-=offsety
+    ex-=offsetx
+    ey-=offsety
+    points = [(sx,sy)]
+    points.append((sx,ey))
+    points.append((ex,ey))
+    points.append((ex,sy))
     t=TYPE()
     i=0
     for point in points:
         t[i].x=int(point[0])
         t[i].y=int(point[1])
         i+=1
-    for sym in CELL_SYMBOLS[CELL_TYPES[_type]]:
-        #print sym
+    for sym in CELL_SYMBOLS[CELL_TYPES[st]]:
         ExportArea(h_writer, t, 4, sym)
+
+idx = 0
+TYPE=(POINT*4)
+open_polygon = False
+for cell in in_file:
     #print points
     idx += 1
     if idx == 100000: print idx
+
+    (x,y,_type)=readline(cell, multiplier)
+    if open_polygon and st == _type and x == sx and y==ey:
+        # push the end of the bar out
+        ey = y+multiplier
+        continue
+    if open_polygon:
+        finish_polygon( sx, sy, sx+multiplier, ey, st, h_writer )
+        open_polygon = False
+    if not open_polygon:
+        sx,sy,st = x,y,_type
+        ey = y+multiplier
+        open_polygon = True
+
+if open_polygon:
+    finish_polygon( sx, sy, sx+multiplier, ey, st, h_writer )
+
 
 WriteOcadFile(h_writer, c_char_p(out_filename))
 CleanWriter(h_writer)
